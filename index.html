@@ -1875,6 +1875,18 @@ border-bottom: 1px solid var(--border);
   #chatResize { display: none; }
   #chatToggle { width: 36px; height: 56px; font-size: 16px; }
   #searchBar { top: 12px; width: 80%; max-width: 320px; }
+  /* GH002-D7: 移动端聊天面板展开时是整屏覆盖（100vw × 100vh），被它盖住的地图层元素此时完全不可见，
+     却仍浮在面板之上：#searchBar(z-index:150) 压住面板自身的 ⚙️ 设置键；
+     #controlPanel(z-index:100，DOM 在 #chatPanel 之后) 压住 ➤ 发送键与弹窗底部按钮。
+     故在 ≤768px 面板展开时让这两个地图控件让位。桌面端(>768px)搜索框居中、聊天为左侧 340px 侧栏，
+     两者本就不重叠，故此处规则仅限移动断点，桌面端行为逐字节不变。
+     [N3] 让位是主动取舍而非副作用：这两个是地图附属控件，聊天面板展开时地图已被整屏遮住、
+     本就无从操作；收起面板后两者立即恢复原状。
+     [N4] DOM 顺序依赖：`~` 是通用兄弟选择器，本规则成立的前提是 #searchBar 与 #controlPanel
+     与 #chatPanel 同为 body 直接子元素、且位于 #chatPanel 之后。若日后把二者移到 #chatPanel 之前，
+     选择器会静默失配（不报错）、遮挡立刻复发，改动 DOM 顺序时必须同步检查这两条规则。 */
+  #chatPanel.open ~ #searchBar { display: none; }
+  #chatPanel.open ~ #controlPanel { display: none; }
   .search-inner { width: 100%; }
   #searchInput { padding: 10px 12px 10px 36px; font-size: 15px; }
   .search-results { max-height: 40vh; top: calc(100% + 4px); }
@@ -1986,7 +1998,9 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
     </div>
   </div>
   <div id="chatPanel">
-    <div class="access-overlay" id="accessOverlay">
+    <!-- GH002-D6: 离线版不使用后端账号体系，登录卡（accessOverlay）保留为后端时代遗留但默认不触发；
+         初始即带 hidden，保证任何自动路径都不会弹出它遮住聊天面板（含右上角 ⚙️ 设置按钮）。 -->
+    <div class="access-overlay hidden" id="accessOverlay">
       <div class="access-card"><span onclick='document.getElementById("accessOverlay").classList.add("hidden")' style="position:absolute;top:12px;right:16px;cursor:pointer;opacity:.5;font-size:16px;color:var(--text)">✕</span>
         <h3 id="authTitle">🔐 登录</h3>
         <p id="authSubtitle">登录后即可使用 AI 问答功能</p>
@@ -2992,7 +3006,8 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
       currentNodeChat = { nodeId: 'ai', nodeName: '人工智能', nodeDesc: '' },
       abortController = null,
       currentConversationId = null,
-      currentUserId = null;
+      currentUserId = null,
+      offlineGuestSession = false;
 
     // GH002-D4: 已移除未被任何代码读取的本地后端地址常量（localhost:3000 / '/test/' 分支）
     loadRefsData();
@@ -3056,9 +3071,14 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
       document.getElementById('aiCfgProvider').value = prov ? prov.id : 'custom';
       document.getElementById('aiCfgNoStream').checked = !!c.noStream;
       document.getElementById('aiCfgTestResult').textContent = '';
+      // GH002-D5: 弹窗显隐必须同时维护 display 与 .show class。
+      // .qr-modal-overlay 默认 opacity:0/pointer-events:none，仅 .show 才可交互；
+      // 若只切 display 会导致遮罩 opacity 仍为 0、pointer-events 仍为 none（点了没反应）。
       document.getElementById('aiSettingsOverlay').style.display = '';
+      document.getElementById('aiSettingsOverlay').classList.add('show');
     }
     function closeAISettings() {
+      document.getElementById('aiSettingsOverlay').classList.remove('show');
       document.getElementById('aiSettingsOverlay').style.display = 'none';
     }
     function saveAISettings() {
@@ -3269,7 +3289,11 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
 
     function restoreLastConversation() {
       try {
-        currentUserId = getCookie('ai_user_id') || null;
+        // GH002-D8: 原式 `getCookie('ai_user_id') || null` 会无条件覆盖 currentUserId，
+        // 而离线版从不写 ai_user_id cookie → 启动 100ms 后被覆盖成 null，使
+        // saveNote()/toggleFav()/loadNote()/loadFavs() 全部早退（笔记与收藏完全不可用）。
+        // 改为「cookie 优先 → 已有内存值 → 离线访客兜底 → null」：cookie 仍优先生效（后端时代行为不变）。
+        currentUserId = getCookie('ai_user_id') || currentUserId || (offlineGuestSession ? 'user_guest' : null);
         var convId = localStorage.getItem("ai_current_conversation_id");
         if (!convId) { createNewConversation(); return !1; }
         if (loadConversation(convId)) {
@@ -3734,7 +3758,12 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
     async function checkAutoLogin() {
       const token = getCookie('ai_token');
       console.log('[AUTH] checkAutoLogin, token from cookie:', token ? token.substring(0,15) + '...' : 'null');
-      if (!token) { document.getElementById('accessOverlay').classList.remove('hidden'); return; }
+      if (!token) {
+        // GH002-D6: 无 cookie = 离线访客，直接放行，不弹登录卡
+        //（登录卡会遮住聊天面板右上角的 ⚙️ 设置按钮，表现为「设置点了没反应」）。
+        establishOfflineGuest();
+        return;
+      }
       try {
         const data = await apiGet('/api/me');
         console.log('[AUTH] /api/me response:', JSON.stringify(data).substring(0, 100));
@@ -3748,10 +3777,13 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
           dismissAccess();
         } else {
           setCookie('ai_token', '', -1);
-          document.getElementById('accessOverlay').classList.remove('hidden');
+          // GH002-D6: 离线版 /api/me 的本地 shim 恒返回访客，此分支仅作兜底；
+          // 同样回到访客态而非弹出登录卡。
+          establishOfflineGuest();
         }
       } catch (err) {
-        document.getElementById('accessOverlay').classList.remove('hidden');
+        // GH002-D6: 离线版 apiGet 为纯本地 shim，不会抛错；此处兜底同样不弹登录卡。
+        establishOfflineGuest();
       }
     }
 
@@ -3778,7 +3810,35 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
     }
 
     function isAccessGranted() {
-      return "granted" === localStorage.getItem("ai_access")
+      // GH002-D7: 优先读内存中的离线访客会话态。localStorage 可能被外部清空/降级
+      // （隐私模式、配额超限、用户手动清数据），此时若只读 localStorage.ai_access
+      // 会把用户退回「未授权」→ 登录卡复现并再次遮挡 ⚙️ 设置按钮。
+      // 内存态在页面刷新后自然重置，刷新后由 establishOfflineGuest() 重建。
+      return offlineGuestSession || "granted" === localStorage.getItem("ai_access")
+    }
+
+    // GH002-D6: 离线版（GitHub Pages 纯静态）没有后端账号体系，不应再有登录门槛。
+    // 建立本地访客身份后直接放行，沿用 apiGet('/api/me') 已有的离线访客语义
+    // （user_guest / 访客），使 currentUserId / 用户显示 / 次数显示 / 笔记收藏维度照常工作。
+    // ai_token 使用 apiGet/apiPost 相同的离线兜底值 'offline_token'，以通过 sendMessage 的取 token 校验。
+    function establishOfflineGuest() {
+      var uid = 'user_guest', name = '访客';
+      try {
+        uid = localStorage.getItem('ai_user_id') || uid;
+        name = localStorage.getItem('ai_username') || name;
+        localStorage.setItem('ai_token', 'offline_token');
+        localStorage.setItem('ai_user_id', uid);
+        localStorage.setItem('ai_username', name);
+        localStorage.setItem('ai_access', 'granted');
+      } catch (e) {
+        // GH002-D7: 存储不可用（隐私模式 / 配额超限）时降级为「纯内存访客态」：
+        // 既不产生未捕获异常，也不回退到「弹登录卡」的老路。
+      }
+      offlineGuestSession = true;
+      currentUserId = uid;
+      // dismissAccess() 先给登录卡加 hidden 再刷新计数/用户名显示，
+      // 即使后续抛错也不会让登录卡复现；此处再兜一层，保证不产生未捕获异常。
+      try { dismissAccess(); } catch (e) { /* 存储不可用时跳过计数/用户名刷新 */ }
     }
 
     function updateLimitDisplay() {
@@ -3830,11 +3890,9 @@ const OFFLINE_REFS_DATA = {"refsData": {"ai": [{"text": "人工智能 - 百度�
       localStorage.removeItem('ai_username');
       currentUserId = null;
       document.getElementById('userDisplay').style.display = 'none';
-      // 显示登录界面
-      document.getElementById('accessOverlay').classList.remove('hidden');
-      document.getElementById('authUsername').value = '';
-      document.getElementById('authPassword').value = '';
-      document.getElementById('authUsername').focus();
+      // GH002-D6: 离线版没有账号体系，「退出登录」只是回到访客身份。
+      // 若在此弹出登录卡，会重新遮住聊天面板的 ⚙️ 设置按钮（同样的用户症状），故改为回到访客态。
+      establishOfflineGuest();
     }
 
     function togglePwdVisibility() {
