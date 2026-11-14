@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>免费 AI API 获取教程 - AI 思维导图</title>
+<style>
+  :root { --bg:#080c18; --card:#111827; --gold:#c9a84c; --text:#e8e0d0; --dim:#9aa4b2; --line:rgba(255,255,255,.12); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Microsoft YaHei',system-ui,sans-serif; line-height:1.8; }
+  .wrap { max-width:720px; margin:0 auto; padding:40px 20px 60px; }
+  h1 { font-size:24px; color:var(--gold); margin-bottom:8px; }
+  .sub { color:var(--dim); font-size:14px; margin-bottom:28px; }
+  .intro { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 20px; font-size:14px; margin-bottom:24px; }
+  .intro b { color:var(--gold); }
+  .step { display:flex; gap:14px; margin-bottom:18px; }
+  .step-num { flex-shrink:0; width:32px; height:32px; border-radius:50%; background:var(--gold); color:#080c18; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .step-body { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; flex:1; font-size:14px; }
+  .step-body b { color:var(--gold); }
+  .step-body a { color:var(--gold); text-decoration:underline; word-break:break-all; }
+  .code { font-family:Consolas,monospace; background:rgba(0,0,0,.4); border-radius:6px; padding:2px 8px; font-size:13px; color:#a5d6a7; }
+  .example { background:var(--card); border:1px solid var(--gold); border-radius:12px; padding:18px 20px; margin:28px 0; font-size:14px; }
+  .example h3 { color:var(--gold); font-size:15px; margin-bottom:12px; }
+  .example table { width:100%; border-collapse:collapse; font-size:13px; }
+  .example td { border:1px solid var(--line); padding:8px 12px; }
+  .example td:first-child { color:var(--dim); width:35%; }
+  .faq { margin-top:28px; }
+  .faq h2 { color:var(--gold); font-size:17px; margin-bottom:14px; }
+  .faq .item { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin-bottom:10px; font-size:14px; }
+  .faq .item b { color:var(--gold); }
+  .back { display:inline-block; margin-top:28px; color:var(--gold); text-decoration:none; font-size:14px; border:1px solid var(--gold); border-radius:8px; padding:8px 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>免费 AI API 获取教程</h1>
+  <p class="sub">只需 5 分钟，让 AI 问答用上你自己的免费 Key</p>
+
+  <div class="intro">
+    本网站的 AI 问答需要<b>你自己的 API Key</b>（保存在你的浏览器本地，我们不保存、不转发）。推荐使用<b>火山方舟</b>的免费模型 <b>Doubao-1.5-lite-32k</b>，个人用户免费。
+  </div>
+
+  <div class="step"><div class="step-num">1</div><div class="step-body">登入火山方舟：<a href="https://console.volcengine.com/auth/login?redirectURI=%2Fhome" target="_blank">console.volcengine.com</a>（需注册火山引擎账号）</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-body">点击左侧菜单 <b>「在线推理」</b>→ <b>「创建推理接入点」</b></div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-body">输入接入点名称（随意，如 my-ai）→ 点击 <b>「添加模型」</b></div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-body">选择一款<b>免费</b>的大模型（推荐 <b>Doubao-1.5-lite-32k</b>）→ 确定</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-body">点击 <b>「创建并接入」</b></div></div>
+  <div class="step"><div class="step-num">6</div><div class="step-body">在接入点详情页获取<b>接入点 ID</b>（形如 <span class="code">ep-2026xxxxxx-xxxxx</span>）</div></div>
+  <div class="step"><div class="step-num">7</div><div class="step-body">在 <b>「API Key 管理」</b>中创建并获取 <b>API Key</b>（形如 <span class="code">xxxxxxxx-xxxx-xxxx</span>）</div></div>
+  <div class="step"><div class="step-num">8</div><div class="step-body">回到本站，点击聊天面板右上角 <b>⚙️</b>：先在「服务商」下拉选 <b>火山方舟</b>（会自动填好 API 地址），再填入 <b>API Key</b> 与 <b>模型名 / 接入点 ID</b> → 保存，完成！若网络或服务商不支持流式响应，可勾选 <b>兼容模式</b>（关闭流式 <span class="code">stream:false</span>，SSE 受限时勾选），按普通 JSON 响应获取回复。</div></div>
+
+  <div class="example">
+    <h3>📋 填写示例对照</h3>
+    <table>
+      <tr><td>API 地址</td><td><span class="code">https://ark.cn-beijing.volces.com/api/v3</span>（火山方舟固定值，直接复制）</td></tr>
+      <tr><td>API Key</td><td>第 7 步获取的 Key</td></tr>
+      <tr><td>模型名 / 接入点 ID</td><td>第 6 步获取的接入点 ID（<span class="code">ep-2026…</span>）</td></tr>
+    </table>
+  </div>
+
+  <div class="faq">
+    <h2>常见问题</h2>
+    <div class="item"><b>安全吗？</b> Key 只存在你浏览器的 localStorage 里，本网站没有任何服务器，不存在泄露渠道。</div>
+    <div class="item"><b>收费吗？</b> 推荐的 Doubao-1.5-lite-32k 为免费模型；如你选用付费模型，费用由你的火山引擎账户承担。</div>
+    <div class="item"><b>换浏览器/换电脑要重新填吗？</b> 是。Key 存在当前浏览器里，换设备需重新粘贴一次。</div>
+    <div class="item"><b>测试连接或提问失败怎么办？</b> 若提示「API Key 无效或无权限（HTTP 401/403）」，请检查设置里的 API Key 与模型/接入点 ID 是否填对、Key 是否有效。若提示「请求未到达服务商」，可能原因包括：API Key 无效（部分服务商的 401/403 错误响应缺少 CORS 响应头，会被浏览器拦截成此类错误）、网络不通，或跨域(CORS)被拦截。请先核对 Key，再尝试更换网络，或换用支持浏览器直调的 OpenAI 兼容服务商（在「服务商」下拉中选择，或选「自定义」并相应更换 API 地址与模型名）。</div>
+    <div class="item"><b>可以用其他服务商吗？</b> 可以。只要兼容 OpenAI 的 <span class="code">/chat/completions</span> 接口（DeepSeek、智谱、硅基流动等均可），填对应的 API 地址和模型名即可。</div>
+  </div>
+
+  <a class="back" href="index.html">← 返回思维导图</a>
+</div>
+</body>
+</html>
